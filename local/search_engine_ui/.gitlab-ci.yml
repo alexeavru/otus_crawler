@@ -1,0 +1,75 @@
+image: ruby:2.4.2
+
+
+stages:
+  - build
+  - test
+  - deploy
+
+
+build:
+  stage: build
+  image: docker:git
+  services:
+    - docker:dind
+  script:
+    - build
+  variables:
+    DOCKER_DRIVER: overlay2
+
+test:
+  stage: test
+  image: docker:git
+  services:
+    - docker:dind
+  script:
+    - test
+  variables:
+    DOCKER_DRIVER: overlay2
+
+deploy:
+  stage: deploy
+  script:
+    - echo 'Deploy'
+
+.auto_devops: &auto_devops |
+  [[ "$TRACE" ]] && set -x
+  export CI_REGISTRY="index.docker.io"
+  export CI_APPLICATION_REPOSITORY=$CI_REGISTRY/$CI_PROJECT_PATH
+  export CI_APPLICATION_TAG=$CI_COMMIT_REF_SLUG
+  export CI_CONTAINER_NAME=ci_job_build_${CI_JOB_ID}
+
+  function build() {
+
+    echo "Building Dockerfile-based application..."
+    echo `git show --format="%h" HEAD | head -1` > build_info.txt
+    echo `git rev-parse --abbrev-ref HEAD` >> build_info.txt
+    docker build -t "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" .
+
+    if [[ -n "$CI_REGISTRY_USER" ]]; then
+      echo "Logging to GitLab Container Registry with CI credentials..."
+      docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD"
+      echo ""
+    fi
+
+    echo "Pushing to GitLab Container Registry..."
+    docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+    echo ""
+  }
+
+  function test() {
+    echo "Run tests Dockerfile-based application..."
+    #docker pull "$CI_PROJECT_PATH:$CI_APPLICATION_TAG"
+    docker run -d -p 8000:8000 --name "$CI_COMMIT_SHORT_SHA" "$CI_PROJECT_PATH:$CI_APPLICATION_TAG"
+    docker exec "$CI_COMMIT_SHORT_SHA" python -m unittest discover -s tests/
+    docker exec "$CI_COMMIT_SHORT_SHA" coverage run -m unittest discover -s tests/
+    docker exec "$CI_COMMIT_SHORT_SHA" coverage report --include ui/ui.py
+    echo "Remove test docker container"
+    docker stop "$CI_COMMIT_SHORT_SHA"
+    docker rm "$CI_COMMIT_SHORT_SHA"
+
+
+  }
+
+before_script:
+  - *auto_devops

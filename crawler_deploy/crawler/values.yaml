@@ -1,0 +1,17 @@
+crawler:
+  image:
+    repository: boygruv/crawler
+    tag: latest
+
+ui:
+  image:
+    repository: boygruv/crawler-ui
+    tag: latest
+  service:
+    externalPort: 8000
+
+rabbitmq:
+  rabbitmqPassword: crawler
+  rabbitmqUsername: crawler
+  rabbitmqMemoryHighWatermark: 1024MB
+  rabbitmqNodename: rabbitmq  

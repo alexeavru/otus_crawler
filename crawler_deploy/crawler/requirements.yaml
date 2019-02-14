@@ -1,0 +1,15 @@
+dependencies:
+  - name: ui
+    version: "1.0.0"
+    repository: "file://../ui"
+  - name: grabber
+    version: 1.0.0
+    repository: file://../grabber
+  - name: rabbitmq
+    version: 4.2.0
+    repository: file://../rabbitmq
+#    repository: https://kubernetes-charts.storage.googleapis.com
+  - name: mongodb
+    version: 5.3.2
+    repository: file://../mongodb
+#    repository: https://kubernetes-charts.storage.googleapis.com

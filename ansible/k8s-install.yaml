@@ -1,0 +1,22 @@
+- name: Provisioning Kubernetes Cluster
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    k8s_username: boygruv
+    k8s_password: Qwertyuiop1234567890
+    k8s_cluster_ip: 35.241.186.89  
+
+  tasks:
+    - name: Install Gitlab helm chart
+      helm:
+        host: localhost
+        chart:
+          name: memcached
+          version: 0.4.0
+          source:
+            type: repo
+            location: https://kubernetes-charts.storage.googleapis.com
+        state: present
+        name: my-memcached
+        namespace: default

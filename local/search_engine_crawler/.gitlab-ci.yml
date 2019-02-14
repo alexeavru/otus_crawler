@@ -1,0 +1,16 @@
+image: tmaier/docker-compose:latest
+
+services:
+  - docker:dind
+
+before_script:
+  - docker -v
+  - docker-compose --version
+  - ls -la  
+
+build image:
+  stage: build
+  script:
+    - docker build -t "$CI_PROJECT_PATH" .
+    - docker-compose up -d
+

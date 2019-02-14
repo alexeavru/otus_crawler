@@ -1,0 +1,13 @@
+---
+service:
+  internalPort: 8000
+  externalPort: 8000
+
+image:
+  repository: boygruv/crawler-ui
+  tag: latest
+
+ingress:
+  class: nginx
+  
+mongoPort: 27017

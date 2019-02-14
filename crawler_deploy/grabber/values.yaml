@@ -1,0 +1,14 @@
+---
+image:
+  repository: boygruv/crawler
+  tag: latest
+
+mongoHost:
+mongoPort:
+rabbitHost:
+rabbitQueue:
+rabbitUsername:
+rabbitPassword:
+checkInterval: 1
+url: https://vitkhab.github.io/search_engine_test_site/
+

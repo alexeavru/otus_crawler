@@ -1,0 +1,15 @@
+dependencies:
+- name: ui
+  repository: file://../ui
+  version: 1.0.0
+- name: grabber
+  repository: file://../grabber
+  version: 1.0.0
+- name: rabbitmq
+  repository: file://../rabbitmq
+  version: 4.2.0
+- name: mongodb
+  repository: file://../mongodb
+  version: 5.3.2
+digest: sha256:f5934e133c673291d11d04d4ea854601defa4bc9094c55025ec8e597ca9727b6
+generated: 2019-02-11T23:44:04.520122013+03:00

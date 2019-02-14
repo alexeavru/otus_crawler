@@ -1,0 +1,21 @@
+- name: Provisioning Kubernetes Cluster
+  hosts: all
+  become: true
+  gather_facts: False
+
+  tasks:
+    - name: Ensure Pip and dev dependencies are installed.
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - python-pip
+        - python-dev
+        - libgit2-dev
+
+    - name: Ensure pyhelm and dependencies are installed.
+      pip:
+        name:
+          #- pygit2==0.24
+          - pyhelm
+        state: present

@@ -1,0 +1,43 @@
+version: '3.3'
+services:
+  mongo_db:
+    image: mongo:3.2
+    volumes:
+      - crawler_db:/data/db
+
+  rmq_host:
+    image: rabbitmq:3
+    environment:
+      - RABBITMQ_DEFAULT_USER=crawler
+      - RABBITMQ_DEFAULT_PASS=crawler
+      - RABBITMQ_VM_MEMORY_HIGH_WATERMARK=1024MiB
+      - RABBITMQ_NODENAME=rabbitmq
+  
+  crawler:
+    image: boygruv/crawler
+    depends_on:
+      - mongo_db
+      - rmq_host
+    environment:
+      - MONGO=mongo_db
+      - MONGO_PORT=27017
+      - RMQ_HOST=rmq_host
+      - RMQ_QUEUE=rabbitmq
+      - RMQ_USERNAME=crawler
+      - RMQ_PASSWORD=crawler
+      - CHECK_INTERVAL=1
+      - URL=https://vitkhab.github.io/search_engine_test_site/
+
+  crawler-ui:
+    image: boygruv/crawler-ui
+    depends_on:
+      - crawler
+    environment:
+      - MONGO=mongo_db
+      - MONGO_PORT=27017
+    ports:
+      - 8000:8000
+
+
+volumes:
+  crawler_db:

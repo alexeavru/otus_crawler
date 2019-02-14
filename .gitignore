@@ -1,0 +1,20 @@
+variables.json
+*.tfstate
+*.tfstate.*.backup
+*.tfstate.backup
+*.tfvars
+*.retry
+.terraform/
+secrets.*
+gce.ini
+jdauphant.nginx
+vault.key
+# Vagrant & molecule
+.vagrant/
+*.log
+*.pyc
+.molecule
+.cache
+.pytest_cache
+docker.retry
+.env
