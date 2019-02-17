@@ -174,4 +174,17 @@ $ helm upgrade crawler-test ./grabber
 # Удалить приложение
 $ helm del --purge crawler-test
 ```
-#### v.0.0.8 - Pipeline для запуска приложения на review и production
+
+#### v.0.0.8 - Мониторинг
+- Добавил в манифест терраформа инсталляцию Prometheus и Grafana. Пароль для Grafana (admin:admin)
+- Добавил в конфиг Prometheus джоб crawler-endpoints для выборки приложения по label app=crawler
+- Создал датасоурс и дашбоард для графаны. В дашборде добавил возможность фильтра метрик по namespace
+- Добавил провиженинг в графане для автоматического создания датасоурс и дашбоард
+
+#### v.0.0.9 - Алертинг
+- Включил Alertmanager
+- Прописал правила для срабатывания алертов: 
+   - падение пода InstanceDown в течении минуты
+- Настроил оповещение в Slack канал: https://boygruv.slack.com/messages/GBCSK40P3/ 
+
+#### v.0.0.10 - Логирование

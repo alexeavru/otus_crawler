@@ -61,21 +61,23 @@ production:
     echo $KUBE_NAMESPACE
     track="${1-stable}"
     name="$CI_ENVIRONMENT_SLUG"
-    helm dep build reddit
+
+    echo "Download helm dependencies..."
+    helm dep update ./crawler
+    helm dep build ./crawler
 
     # for microservice in $(helm dep ls | grep "file://" | awk '{print $1}') ; do
     #   SET_VERSION="$SET_VERSION \ --set $microservice.image.tag='$(curl http://gitlab-gitlab/$CI_PROJECT_NAMESPACE/ui/raw/master/VERSION)' "
 
     helm upgrade --install \
       --wait \
-      --set ui.ingress.host="$host" \
-      --set ui.image.tag="$(curl http://gitlab-gitlab/$CI_PROJECT_NAMESPACE/ui/raw/master/VERSION)" \
-      --set post.image.tag="$(curl http://gitlab-gitlab/$CI_PROJECT_NAMESPACE/post/raw/master/VERSION)" \
-      --set comment.image.tag="$(curl http://gitlab-gitlab/$CI_PROJECT_NAMESPACE/comment/raw/master/VERSION)" \
+      --set crawler-ui.ingress.host="$host" \
+      --set crawler-ui.image.tag="$(curl http://gitlab-gitlab/$CI_PROJECT_NAMESPACE/crawler-ui/raw/master/VERSION)" \
+      --set crawler.image.tag="$(curl http://gitlab-gitlab/$CI_PROJECT_NAMESPACE/crawler/raw/master/VERSION)" \
       --namespace="$KUBE_NAMESPACE" \
       --version="$CI_PIPELINE_ID-$CI_JOB_ID" \
       "$name" \
-      reddit
+      crawler
   }
 
   function install_dependencies() {
@@ -86,7 +88,7 @@ production:
     apk add glibc-2.23-r3.apk
     rm glibc-2.23-r3.apk
 
-    curl https://kubernetes-helm.storage.googleapis.com/helm-v2.7.2-linux-amd64.tar.gz | tar zx
+    curl https://kubernetes-helm.storage.googleapis.com/helm-v2.9.1-linux-amd64.tar.gz | tar zx
 
     mv linux-amd64/helm /usr/bin/
     helm version --client
@@ -103,7 +105,7 @@ production:
   function install_tiller() {
     echo "Checking Tiller..."
     helm init --upgrade
-    kubectl rollout status -n "$TILLER_NAMESPACE" -w "deployment/tiller-deploy"
+    #kubectl rollout status -n "$TILLER_NAMESPACE" -w "deployment/tiller-deploy"
     if ! helm version --debug; then
       echo "Failed to init Tiller."
       return 1

@@ -189,6 +189,16 @@ provider "helm" "cluster_helm" {
 }
 
 
+# Подключение к Kubernetes кластеру
+resource "null_resource" "cluster_get_credentials" {
+  provisioner "local-exec" {
+    command = "gcloud container clusters get-credentials ${google_container_cluster.k8s.name} --zone=${google_container_cluster.k8s.zone} --project=${google_container_cluster.k8s.project}"
+  }
+  depends_on = ["google_container_cluster.k8s"]
+}
+
+
+# Install helm Gitlab
 resource "helm_release" "gitlab" {
   name          = "gitlab"
   repository    = "../chart"
@@ -201,13 +211,61 @@ resource "helm_release" "gitlab" {
 
 }
 
-# Подключение к Kubernetes кластеру
-resource "null_resource" "cluster_get_credentials" {
-  provisioner "local-exec" {
-    command = "gcloud container clusters get-credentials ${google_container_cluster.k8s.name} --zone=${google_container_cluster.k8s.zone} --project=${google_container_cluster.k8s.project}"
-  }
-  depends_on = ["google_container_cluster.k8s"]
+# Install helm Prometheus
+resource "helm_release" "prometheus" {
+  name          = "prometheus"
+  repository    = "../chart"
+  chart         = "prometheus"
+  version       = "8.7.1"
+
+  values = [
+    "${file("../chart/prometheus/custom_values.yaml")}"
+  ]
+
 }
+
+# Install helm Prometheus
+resource "helm_release" "efk" {
+  name          = "elastic-stack"
+  repository    = "../chart"
+  chart         = "elastic-stack"
+  version       = "1.5.0"
+
+}
+
+
+# Install helm Grafana
+resource "helm_release" "grafana" {
+  name          = "grafana"
+  repository    = "../chart"
+  chart         = "grafana"
+  version       = "1.26.1"
+
+  set {
+    name  = "adminPassword"
+    value = "admin"
+  }
+  set {
+    name  = "service.type"
+    value = "NodePort"
+  }
+  set {
+    name  = "ingress.enabled"
+    value = "true"
+  }
+  set {
+    name  = "ingress.hosts"
+    value = "{crawler-grafana}"
+  }
+  
+}
+
+
+
+
+
+
+###############################################################################################
 
 /*
 resource "null_resource" "helm_init" {

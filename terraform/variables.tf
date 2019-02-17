@@ -20,7 +20,7 @@ variable cluster_name {
 
 variable cluster_node_count {
   description = "Kubernetes cluster node count"
-  default     = 3
+  default     = 4
 }
 
 variable cluster_auth_username {
