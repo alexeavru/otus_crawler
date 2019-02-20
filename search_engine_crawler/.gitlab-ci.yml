@@ -126,9 +126,12 @@ production:
     helm dep update crawler-deploy/crawler
 
     echo "Deploy helm release $name to $KUBE_NAMESPACE"
+    echo "Application TAG  - $CI_APPLICATION_TAG"
+    echo "Project NAME  - $CI_PROJECT_NAME"
+
     helm upgrade --install \
       --wait \
-      --set ui.ingress.host="$host" \
+      --set crawler-ui.ingress.host="$host" \
       --set $CI_PROJECT_NAME.image.tag=$CI_APPLICATION_TAG \
       --namespace="$KUBE_NAMESPACE" \
       --version="$CI_PIPELINE_ID-$CI_JOB_ID" \

@@ -3,7 +3,7 @@ crawler:
     repository: boygruv/crawler
     tag: latest
 
-ui:
+crawler-ui:
   image:
     repository: boygruv/crawler-ui
     tag: latest

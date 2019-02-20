@@ -1,0 +1,8 @@
+---
+name: efk
+version: 1.0.0 
+description: Crawler application
+maintainers: 
+  - name: Aleskey Ermolaev
+    email: boygruv@gmail.com 
+appVersion: 1.0 

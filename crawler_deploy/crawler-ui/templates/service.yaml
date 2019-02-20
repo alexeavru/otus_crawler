@@ -2,10 +2,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ template "ui.fullname" . }}
+  name: {{ template "crawler-ui.fullname" . }}
   labels:
     app: crawler
-    component: ui
+    component: crawler-ui
     release: {{ .Release.Name }}
 spec:
   type: NodePort
@@ -15,5 +15,5 @@ spec:
     targetPort: {{ .Values.service.internalPort }}
   selector:
     app: crawler
-    component: ui
+    component: crawler-ui
     release: {{ .Release.Name }}

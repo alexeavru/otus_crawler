@@ -54,6 +54,37 @@ resource "google_container_cluster" "k8s" {
 
 }
 
+# NodePool для Elasticsearch
+resource "google_container_node_pool" "elasticsearch_nodes" {
+  name       = "elasticsearch-node-pool"
+  zone       = "${var.zone}"
+  cluster    = "${google_container_cluster.k8s.name}"
+  node_count = 1
+
+  node_config {
+    preemptible  = true
+    machine_type = "n1-standard-2"
+    disk_size_gb = 40
+
+    labels {
+      "elastichost" = "true"
+    }
+
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/compute",
+      "https://www.googleapis.com/auth/devstorage.read_only",
+      "https://www.googleapis.com/auth/logging.write",
+      "https://www.googleapis.com/auth/monitoring",
+      "https://www.googleapis.com/auth/servicecontrol",
+      "https://www.googleapis.com/auth/service.management.readonly",
+      "https://www.googleapis.com/auth/trace.append"
+    ]
+  }
+
+  depends_on = ["google_container_cluster.k8s"]
+
+}
+
 resource "google_compute_firewall" "crawler" {
   name = "allow-crawler-default"
 
@@ -75,36 +106,9 @@ resource "google_compute_firewall" "crawler" {
 
 }
 
-/*
-# Диск для Gitlab
-resource "google_compute_disk" "default" {
-  name  = "gitlab-postgresql-disk"
-  zone  = "${var.zone}"
-  size  = 25GB
-  labels {
-    environment = "gitlab"
-  }
-}
-*/
-
-# The following outputs allow authentication and connectivity to the GKE Cluster.
-/*
-output "client_certificate" {
-  value = "${google_container_cluster.k8s.master_auth.0.client_certificate}"
-}
-
-output "client_key" {
-  value = "${google_container_cluster.k8s.master_auth.0.client_key}"
-}
-
-output "cluster_ca_certificate" {
-  value = "${google_container_cluster.k8s.master_auth.0.cluster_ca_certificate}"
-}
-*/
 output "cluster_endpoint" {
   value = "${google_container_cluster.k8s.endpoint}"
 }
-
 
 
 locals {
@@ -125,17 +129,6 @@ provider "kubernetes" {
   cluster_ca_certificate = "${local.k8s_cluster_ca_certificate}"
 }
 
-/*
-module "tiller" {
-  source = "git::https://github.com/lsst-sqre/terraform-tinfoil-tiller.git//?ref=master"
-
-  namespace       = "kube-system"
-  service_account = "tiller"
-  tiller_image    = "gcr.io/kubernetes-helm/tiller:v2.11.0"
-
-}
-*/
-
 
 resource "kubernetes_service_account" "tiller" {
   metadata {
@@ -143,6 +136,7 @@ resource "kubernetes_service_account" "tiller" {
     namespace = "kube-system"
   }
   automount_service_account_token = true
+  depends_on = ["google_container_cluster.k8s"]
 }
 
 resource "kubernetes_cluster_role_binding" "tiller" {
@@ -163,6 +157,9 @@ resource "kubernetes_cluster_role_binding" "tiller" {
     api_group = ""
     namespace = "kube-system"
   }
+
+  depends_on = ["google_container_cluster.k8s"]
+
 }
 
 
@@ -181,11 +178,6 @@ provider "helm" "cluster_helm" {
 
   service_account = "${kubernetes_service_account.tiller.metadata.0.name}"
   namespace       = "${kubernetes_service_account.tiller.metadata.0.namespace}"
-#  service_account = "${module.tiller.service_account}"
-#  namespace       = "${module.tiller.namespace}"
-#  tiller_image    = "gcr.io/kubernetes-helm/tiller:v2.11.0"
-#  insecure        = true
-#  install_tiller  = true
 }
 
 
@@ -209,6 +201,8 @@ resource "helm_release" "gitlab" {
     "${file("../chart/gitlab-omnibus/values.yaml")}"
   ]
 
+  depends_on = ["google_container_cluster.k8s","google_container_node_pool.elasticsearch_nodes"]
+
 }
 
 # Install helm Prometheus
@@ -221,15 +215,7 @@ resource "helm_release" "prometheus" {
   values = [
     "${file("../chart/prometheus/custom_values.yaml")}"
   ]
-
-}
-
-# Install helm Prometheus
-resource "helm_release" "efk" {
-  name          = "elastic-stack"
-  repository    = "../chart"
-  chart         = "elastic-stack"
-  version       = "1.5.0"
+  depends_on = ["google_container_cluster.k8s","google_container_node_pool.elasticsearch_nodes"]
 
 }
 
@@ -257,15 +243,61 @@ resource "helm_release" "grafana" {
     name  = "ingress.hosts"
     value = "{crawler-grafana}"
   }
+  depends_on = ["google_container_cluster.k8s","google_container_node_pool.elasticsearch_nodes"]
+  
+}
+
+# Install helm Prometheus
+resource "helm_release" "efk" {
+  name          = "efk"
+  repository    = "../chart"
+  chart         = "efk"
+  version       = "1.0.0"
+
+  depends_on = ["google_container_cluster.k8s","google_container_node_pool.elasticsearch_nodes"]
+
+}
+
+
+# Install helm Kibana
+resource "helm_release" "kibana" {
+  name          = "kibana"
+  repository    = "stable"
+  chart         = "kibana"
+  version       = "0.2.1"
+
+  set {
+    name  = "env.ELASTICSEARCH_URL"
+    value = "http://elasticsearch-logging:9200"
+  }
+  set {
+    name  = "ingress.enabled"
+    value = "true"
+  }
+  set {
+    name  = "ingress.hosts"
+    value = "{crawler-kibana}"
+  }
+
+  depends_on = ["google_container_cluster.k8s","google_container_node_pool.elasticsearch_nodes"]
   
 }
 
 
 
-
-
-
 ###############################################################################################
+
+
+/*
+module "tiller" {
+  source = "git::https://github.com/lsst-sqre/terraform-tinfoil-tiller.git//?ref=master"
+
+  namespace       = "kube-system"
+  service_account = "tiller"
+  tiller_image    = "gcr.io/kubernetes-helm/tiller:v2.11.0"
+
+}
+*/
 
 /*
 resource "null_resource" "helm_init" {
@@ -283,7 +315,6 @@ resource "null_resource" "helm_install_gitlab" {
   depends_on = ["google_container_cluster.k8s"]
 }
 */
-
 
 /*
 resource "kubernetes_config_map" "postgres-config" {

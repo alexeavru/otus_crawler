@@ -29,7 +29,7 @@ services:
       - URL=https://vitkhab.github.io/search_engine_test_site/
 
   crawler-ui:
-    image: boygruv/crawler-ui
+    image: boygruv/crawler-ui:feature1
     depends_on:
       - crawler
     environment:

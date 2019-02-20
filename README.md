@@ -1,16 +1,41 @@
 # otus_crawler
 Проект микросервисного приложения по парсингу сайтов
 
+### Необходимое ПО (на локальной машине)
+Для установки проекта на локальной машине потребуется следующее ПО
+- Terraform
+- gcloud
+- helm
+- kubectl
+
+
 ### Порядок запуска проекта
 - **Создание кластера Kubernetes**
    - Создается кластер на 3 ноды (количество нод задается через переменную var.cluster_node_count)
+   - Также для Elasticsearch создается отдельный пулл повышенной мощности `n1-standart-2`
    - Создаются необходимые правила firewall
    - Создается Service account `tiller`
    - Сервис аккаунту присваивается роль `cluster-admin`
-   - В кластер устанавливается приложение Gitlab-omnibus (через helm chart)
+   - В кластер устанавливается helm chart приложения
+     - Gitlab-omnibus
+     - Prometheus
+     - EFK (Elasticsearch - Fluentd - Kibana)
+     - Grafana
+     - Kibana
 ```
-$ cd terraform && terraform apply
+$ cd terraform && terraform init && terraform apply
 ```
+- **Подключение к кластеру**
+   - Для подключения к кластеру смотрим IP адрес ingress nginx
+   ```
+   $ kubectl get service -n nginx-ingress nginx
+   ``` 
+   - И прописываем его в hosts
+   ```
+   ## Файл /etc/hosts
+   10.10.10.10  gitlab-gitlab production staging crawler-prometheus crawler-grafana crawler-kibana
+   ```
+
 - **Настройка Gitlab**
    - Создаем группу для проектов
    - Добавляем в настройках группы 2 переменные для доступа к докерхаб (CI_REGISTRY_USER и CI_REGISTRY_PASSWORD)
@@ -59,16 +84,16 @@ $ cd terraform && terraform apply
    - ___staging___ - на данном этапе устанавливаем зависимости, создаем отдельный namespace **staging** в kubernetes, устанавливаем tiller и производим установку chart приложения на тестовое окружение
    - ___production___ - на данном этапе устанавливаем зависимости, создаем отдельный namespace **production** в kubernetes, устанавливаем tiller и производим установку chart приложения на продакшн окружение
 
-----
-## Backlog
-- **Мониторинг**. 
-   - Организация сбора метрик кластера с помощью Prometheus. 
-   - Разработка необходимых дашбордов Grafana. 
-   - Алертинг оповещение о событиях в кластере (slack, email)
-- **Логирование**. Организация сбора логов микросервисов системой EFK.
-- **Трейсинг** - по возможности
-- **ChatOps** - по возможности
+### Мониторинг 
+   - Мониторинг организован при помощи Prometheus.
+   - Визуализация метрик Grafana. Разаработанны дашбоард и датасоурс автоматически провижинится при инсталляции. 
+   - В разработанном дашборде добавлена возможность для выбора разных namespace.
+   - Алертинг. Оргинизовано оповещение о падении подов в канал slack: https://boygruv.slack.com/messages/GBCSK40P3/
 
+### Логирование. Организация сбора логов микросервисов системой EFK.
+   - Для логирования микросервисов был разработан собственный helm chart: EFK поднимающий БД Elasticsearch и Fluentd DaemonSet.
+   - Kibana устанавливантся отдельно из публичного репозитория.
+   - Для просмотра логов в Kibana добавляем индекс fluentd-*
 
 
 
@@ -188,3 +213,12 @@ $ helm del --purge crawler-test
 - Настроил оповещение в Slack канал: https://boygruv.slack.com/messages/GBCSK40P3/ 
 
 #### v.0.0.10 - Логирование
+- Добавил helm chart для запуска EFK и Kibana
+- Для Elasticsearch добавил отдельный инстанс и пометил label = elastichost 
+- Для просмотра логов в Kibana добавляем индекс fluentd-*
+
+
+#### v.0.0.11 - Тестирование кода в докер контейнере
+
+### Backlog
+- Вынос файла состояния Terraform в GCP Backet
