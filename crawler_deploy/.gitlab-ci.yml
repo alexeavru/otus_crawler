@@ -1,17 +1,8 @@
 image: alpine:latest
 
 stages:
-  - test
   - staging
   - production
-
-test:
-  stage: test
-  script:
-    - exit 0
-  only:
-    - triggers
-    - branches
 
 staging:
   stage: staging
@@ -66,11 +57,16 @@ production:
     helm dep update ./crawler
     helm dep build ./crawler
 
+    echo "VIEW CAHRTS"
+    ls -la ./crawler/charts
+
     # for microservice in $(helm dep ls | grep "file://" | awk '{print $1}') ; do
     #   SET_VERSION="$SET_VERSION \ --set $microservice.image.tag='$(curl http://gitlab-gitlab/$CI_PROJECT_NAMESPACE/ui/raw/master/VERSION)' "
 
     helm upgrade --install \
       --wait \
+      --force \
+      --recreate-pods \
       --set crawler-ui.ingress.host="$host" \
       --set crawler-ui.image.tag="$(curl http://gitlab-gitlab/$CI_PROJECT_NAMESPACE/crawler-ui/raw/master/VERSION)" \
       --set crawler.image.tag="$(curl http://gitlab-gitlab/$CI_PROJECT_NAMESPACE/crawler/raw/master/VERSION)" \
@@ -88,7 +84,7 @@ production:
     apk add glibc-2.23-r3.apk
     rm glibc-2.23-r3.apk
 
-    curl https://kubernetes-helm.storage.googleapis.com/helm-v2.9.1-linux-amd64.tar.gz | tar zx
+    curl https://kubernetes-helm.storage.googleapis.com/helm-v2.11.0-linux-amd64.tar.gz | tar zx
 
     mv linux-amd64/helm /usr/bin/
     helm version --client
@@ -118,6 +114,7 @@ production:
     name="$CI_ENVIRONMENT_SLUG"
     helm delete "$name" || true
   }
+
 
 before_script:
   - *auto_devops

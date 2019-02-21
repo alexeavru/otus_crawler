@@ -1,7 +1,11 @@
 FROM python:3.6.0-alpine
 
 WORKDIR /app
-ADD . /app
+RUN mkdir /app/ui
+ADD ./ui /app/ui
+COPY requirements.txt /app/requirements.txt
+COPY requirements-test.txt /app/requirements-test.txt
+
 
 RUN pip install -r /app/requirements.txt -r /app/requirements-test.txt
 

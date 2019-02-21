@@ -11,8 +11,8 @@ resource "google_container_cluster" "k8s" {
   enable_legacy_abac  = true
   logging_service     = "none"
   monitoring_service  = "none"
-  network             = "projects/docker-223416/global/networks/default"
-  subnetwork          = "projects/docker-223416/regions/europe-west1/subnetworks/default"
+  network             = "projects/${var.project}/global/networks/default"
+  subnetwork          = "projects/${var.project}/regions/${var.region}/subnetworks/default"
 
   addons_config {
     http_load_balancing {
@@ -178,6 +178,8 @@ provider "helm" "cluster_helm" {
 
   service_account = "${kubernetes_service_account.tiller.metadata.0.name}"
   namespace       = "${kubernetes_service_account.tiller.metadata.0.namespace}"
+  install_tiller  = "true"
+  tiller_image    = "gcr.io/kubernetes-helm/tiller:v2.11.0"
 }
 
 

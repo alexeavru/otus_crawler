@@ -1,7 +1,10 @@
 FROM python:3.6.0-alpine
 
 WORKDIR /app
-ADD . /app
+RUN mkdir /app/crawler
+ADD ./crawler /app/crawler
+COPY requirements.txt /app/requirements.txt
+COPY requirements-test.txt /app/requirements-test.txt
 
 RUN pip install -r /app/requirements.txt -r /app/requirements-test.txt
 

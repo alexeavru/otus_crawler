@@ -6,7 +6,7 @@ stages:
   - review
   - release
   - cleanup
-  - production
+  - deploy
 
 build:
   stage: build
@@ -83,7 +83,7 @@ stop_review:
     - master
 
 production:
-  stage: production
+  stage: deploy
   script:
     - install_dependencies
     - ensure_namespace
@@ -94,6 +94,24 @@ production:
   environment:
     name: production
     url: http://production
+  when: manual
+  only:
+    refs:
+      - master
+    kubernetes: active
+
+staging:
+  stage: deploy
+  script:
+    - install_dependencies
+    - ensure_namespace
+    - install_tiller
+    - deploy
+  variables:
+    KUBE_NAMESPACE: staging
+  environment:
+    name: staging
+    url: http://staging
   when: manual
   only:
     refs:
@@ -129,15 +147,30 @@ production:
     echo "Application TAG  - $CI_APPLICATION_TAG"
     echo "Project NAME  - $CI_PROJECT_NAME"
 
-    helm upgrade --install \
-      --wait \
-      --set crawler-ui.ingress.host="$host" \
-      --set $CI_PROJECT_NAME.image.tag=$CI_APPLICATION_TAG \
-      --namespace="$KUBE_NAMESPACE" \
-      --version="$CI_PIPELINE_ID-$CI_JOB_ID" \
-      "$name" \
-      crawler-deploy/crawler/
+    if [[ "$CI_APPLICATION_TAG" ==  "master" ]]; then
+      helm upgrade --install \
+        --wait \
+        --force \
+        --recreate-pods \
+        --set crawler-ui.ingress.host="$host" \
+        --set crawler-ui.image.tag="$(curl http://gitlab-gitlab/$CI_PROJECT_NAMESPACE/crawler-ui/raw/master/VERSION)" \
+        --set crawler.image.tag="$(curl http://gitlab-gitlab/$CI_PROJECT_NAMESPACE/crawler/raw/master/VERSION)" \
+        --namespace="$KUBE_NAMESPACE" \
+        --version="$CI_PIPELINE_ID-$CI_JOB_ID" \
+        "$name" \
+        crawler-deploy/crawler/
+    else
+      helm upgrade --install \
+        --wait \
+        --set crawler-ui.ingress.host="$host" \
+        --set $CI_PROJECT_NAME.image.tag=$CI_APPLICATION_TAG \
+        --namespace="$KUBE_NAMESPACE" \
+        --version="$CI_PIPELINE_ID-$CI_JOB_ID" \
+        "$name" \
+        crawler-deploy/crawler/
+    fi
   }
+
 
   function install_dependencies() {
 
@@ -150,7 +183,7 @@ production:
     curl https://storage.googleapis.com/pub/gsutil.tar.gz | tar -xz -C $HOME
     export PATH=${PATH}:$HOME/gsutil
 
-    curl https://kubernetes-helm.storage.googleapis.com/helm-v2.9.1-linux-amd64.tar.gz | tar zx
+    curl https://kubernetes-helm.storage.googleapis.com/helm-v2.11.0-linux-amd64.tar.gz | tar zx
 
     mv linux-amd64/helm /usr/bin/
     helm version --client
@@ -188,6 +221,10 @@ production:
   }
 
   function build() {
+
+    if [[ "$CI_APPLICATION_TAG" ==  "master" ]]; then
+      export CI_APPLICATION_TAG=$(cat VERSION)
+    fi
 
     echo "Building Dockerfile-based application..."
     echo `git show --format="%h" HEAD | head -1` > build_info.txt
@@ -233,10 +270,10 @@ production:
 
   function test() {
     echo "Run tests Dockerfile-based application..."
+
     docker pull "$CI_PROJECT_PATH:$CI_APPLICATION_TAG"
     docker images
-    docker run -d -p 8000:8000 --name crawler_test "$CI_PROJECT_PATH:$CI_APPLICATION_TAG"
-    docker ps -a
+    docker run -d -p 8000:8000 -v $(pwd)/tests:/app/tests --name crawler_test "$CI_PROJECT_PATH:$CI_APPLICATION_TAG"
     docker exec crawler_test python -m unittest discover -s tests/
     docker exec crawler_test coverage run -m unittest discover -s tests/
     docker exec crawler_test coverage report --include crawler/crawler.py
